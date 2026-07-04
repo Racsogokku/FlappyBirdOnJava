@@ -2,12 +2,13 @@ package osquitarINC;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+
 class Coso  {
     protected int x;
     protected int y;
@@ -39,9 +40,9 @@ class Coso  {
     }
 }
 class Pajaro extends Coso {
-    private final int impulsoSalto=-12;
+    private final int impulsoSalto=-13;
     private final int GRAVEDAD = 1;
-    private int velocidadCaida=GRAVEDAD;
+    public int velocidadCaida=GRAVEDAD;
     Pajaro(){
         this(100, 250, 30, 30);
     }
@@ -80,10 +81,25 @@ public class Juego extends JPanel implements ActionListener{
     private Pajaro pajaro;
     private List<Tubo> listaTubos = new ArrayList<>();
     private int velocidadLateral = -4;
+    private int anchoTubo = 100;
+    private Random random =new Random();
+    private int huecoEntreTubos = 167;
+    int fps;
+    int contador;
+    public void crearPipe(){
+        int alturaRandom = random.nextInt(getHeight()/2);
+        Tubo tuboArriba = new Tubo(getWidth(),0,anchoTubo,alturaRandom);
+        int cuantoQueda = alturaRandom+huecoEntreTubos;
+        Tubo tuboDebajo = new Tubo(getWidth(),cuantoQueda,anchoTubo,getHeight()-cuantoQueda);
+        listaTubos.add( tuboArriba);
+        listaTubos.add(tuboDebajo);
+    }
     public Juego(int fps){
+        this.fps = fps;
+        contador=fps;
         Timer timer = new Timer(Math.floorDiv(1000,fps),this);
         timer.start();
-        pajaro = new Pajaro(getWidth()/2,getHeight()/2,30,30);
+        pajaro = new Pajaro(0,0,30,30);
         addKeyListener(new KeyListener() {
             @Override
             public void keyTyped (KeyEvent e) {}
@@ -92,6 +108,7 @@ public class Juego extends JPanel implements ActionListener{
             public void keyPressed (KeyEvent e) {
                 if (e.getKeyCode()==KeyEvent.VK_SPACE){
                     System.out.println("Salto :)");
+
                     pajaro.saltar();
                 }
             }
@@ -101,14 +118,39 @@ public class Juego extends JPanel implements ActionListener{
         });
         this.setFocusable(true);
         this.requestFocusInWindow();
+        this.addComponentListener(new ComponentListener() {
+            @Override
+            public void componentResized (ComponentEvent e) {
+                pajaro.setX(getWidth()/4);
+            }
+
+            @Override
+            public void componentMoved (ComponentEvent e) {}
+
+            @Override
+            public void componentShown (ComponentEvent e) {}
+
+            @Override
+            public void componentHidden (ComponentEvent e) {}
+
+        });
     }
     private void actualizarCosas(){
         pajaro.caer(this.getHeight());
+        if(contador>=fps&&getWidth()>1){
+            contador=0;
+            if(huecoEntreTubos>100){
+                huecoEntreTubos-=1;
+            }
+            crearPipe();
+        }
         listaTubos.forEach(x -> x.aumentarX(velocidadLateral));
+        listaTubos.removeIf(x-> x.x+x.ancho<=0);
     }
 
     @Override
     public void actionPerformed (ActionEvent e) {
+        contador+=1;
         actualizarCosas();
         comprobarColisiones();
         repaint();
@@ -127,6 +169,7 @@ public class Juego extends JPanel implements ActionListener{
         for (Tubo tubo: listaTubos){
             g.fillRect(tubo.x,tubo.y,tubo.ancho,tubo.altura);
         }
+        Toolkit.getDefaultToolkit().sync();
     }
 
     private void comprobarColisiones () {
